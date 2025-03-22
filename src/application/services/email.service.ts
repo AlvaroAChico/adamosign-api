@@ -32,7 +32,7 @@ export async function sendOtpEmail(
   htmlContent = htmlContent.replace(/{{CODE_OTP}}/g, otp);
 
   const mailOptions = {
-    from: process.env.SMTP_FROM,
+    from: "Adamo <alvarochico.sp@gmail.com>",
     to: email,
     subject: "Your OTP Code for Password Recovery",
     html: htmlContent,
@@ -61,7 +61,7 @@ export async function sendWelcomeEmail(
     htmlContent = htmlContent.replace(/{{FIRST_NAME}}/g, firstName);
 
     const mailOptions = {
-      from: process.env.SMTP_FROM,
+      from: "Adamo <alvarochico.sp@gmail.com>",
       to: email,
       subject: "Welcome to Our Platform!",
       html: htmlContent,
@@ -85,7 +85,7 @@ export async function sendPasswordUpdatedEmail(email: string): Promise<void> {
     let htmlContent = fs.readFileSync(templatePath, "utf8");
 
     const mailOptions = {
-      from: process.env.SMTP_FROM,
+      from: "Adamo <alvarochico.sp@gmail.com>",
       to: email,
       subject: "Your Password Has Been Updated",
       html: htmlContent,

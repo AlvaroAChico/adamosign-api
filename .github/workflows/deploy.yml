@@ -1,0 +1,77 @@
+name: Deploy Adamo API
+
+on:
+  push:
+    branches:
+      - develop
+
+env:
+  IMAGE_NAME: adamo-api
+  CONTAINER_NAME: adamo-api
+  PORT: 3000
+
+jobs:
+  deploy:
+    name: 🔄 Deploy to GCP VM (SSH sin heredoc)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: 🔐 Guardar clave SSH
+        run: |
+          echo "${{ secrets.GCP_SSH_KEY }}" > adamo_key.pem
+          chmod 600 adamo_key.pem
+
+      - name: 🔗 Verificar conexión SSH
+        run: |
+          HOST="${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }}"
+          echo "🌐 Conectando a $HOST"
+          ssh -i adamo_key.pem -o StrictHostKeyChecking=no "$HOST" "echo ✅ Conectado a la VM"
+
+      - name: 📁 Clonar o acceder al repositorio
+        run: |
+          ssh -i adamo_key.pem -o StrictHostKeyChecking=no ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} '
+            cd ~/adamo-api || git clone https://github.com/AlvaroAChico/adamosign-api.git adamo-api
+          '
+
+      - name: 📥 Hacer pull de la última versión
+        run: |
+          ssh -i adamo_key.pem -o StrictHostKeyChecking=no ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} '
+            cd ~/adamo-api && git pull origin develop
+          '
+
+      - name: 🧼 Limpiar contenedor anterior
+        run: |
+          ssh -i adamo_key.pem -o StrictHostKeyChecking=no ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} '
+            docker stop adamo-api || true && docker rm adamo-api || true
+          '
+
+      - name: 🐳 Construir imagen Docker
+        run: |
+          ssh -i adamo_key.pem -o StrictHostKeyChecking=no ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} '
+            cd ~/adamo-api && docker build -t adamo-api .
+          '
+
+      - name: 🚢 Ejecutar contenedor en puerto 80 → 3000
+        run: |
+          ssh -i adamo_key.pem -o StrictHostKeyChecking=no ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} '
+            docker run -d --name adamo-api -p 80:3000 \
+              -e PORT=3000 \
+              -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e OTP_EXPIRATION_MINUTES="${{ secrets.OTP_EXPIRATION_MINUTES }}" \
+              -e SMTP_HOST="${{ secrets.SMTP_HOST }}" \
+              -e SMTP_PORT="${{ secrets.SMTP_PORT }}" \
+              -e SMTP_SECURE="${{ secrets.SMTP_SECURE }}" \
+              -e SMTP_USER="${{ secrets.SMTP_USER }}" \
+              -e SMTP_PASS="${{ secrets.SMTP_PASS }}" \
+              adamo-api
+          '
+
+      - name: ✅ Confirmar despliegue
+        run: |
+          ssh -i adamo_key.pem -o StrictHostKeyChecking=no ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} '
+            docker ps -a --filter "name=adamo-api"
+          '
