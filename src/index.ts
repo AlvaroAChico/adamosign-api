@@ -4,10 +4,12 @@ import swaggerSpec from "./config/swagger.config";
 import authRoutes from "./adapters/http/routes/auth.routes";
 import { loadConfigDatabase } from "./infrastructure/database/mongo-connection";
 import cors from "cors";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3600;
-
+const PORT = process.env.PORT || 3000;
 loadConfigDatabase();
 
 app.use(cors());
